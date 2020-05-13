@@ -1,0 +1,9 @@
+'SOURCE_DATA_DIR_1' : './../../generated_data_v1'
+'DIR': 'us_import1'
+'SAVE_DATA_DIR': './saved_data/'
+'id_col': 'PanjivaRecordID'
+'label_col' : 'y_label'
+'model_use_data_DIR' : 'model_use_data'
+'num_jobs': 8
+'context_size' :
+'model_weights_data' : 'model_weights_data'
