@@ -313,7 +313,7 @@ def HSCode_clean_select(
             filter_hscode
         )
         df = df.dropna()
-        df[hscode_2_col] = None
+
         df[hscode_2_col] = df[hscode_col].parallel_apply(
             get_HSCode2
         )
@@ -368,9 +368,10 @@ def lexical_sort_cols(df):
     feature_columns = list(df.columns)
     for rc in rmv_cols:
         try:
-            feature_columns.remove(id_col)
+            feature_columns.remove(rc)
         except:
             pass
+
     feature_columns = list(sorted(feature_columns))
 
     ord_cols = rmv_cols + feature_columns
@@ -459,7 +460,6 @@ def create_data_sets():
             (~train_df['ConsigneePanjivaID'].isin(exclude_consigneeids))
         ]
 
-        print(_hscode2, len(tmp_df))
         all_con = list(set(tmp_df['ConsigneePanjivaID']))
         consignees = np.random.choice(
             all_con,
@@ -478,32 +478,37 @@ def create_data_sets():
 
 
     print( len(interesting_data) )
+    print(interesting_data.columns)
     print( len(non_interesting_data) )
+    print(non_interesting_data.columns)
     print(len(set(non_interesting_data['ConsigneePanjivaID'])), len(set(interesting_data['ConsigneePanjivaID'])))
 
     train_df = interesting_data.append(non_interesting_data,ignore_index=True)
-    def label_func(_val):
-        if  _val == '44': return 0
-        else:  return 1
-
-    train_df[hscode_2_col] = train_df[hscode_2_col].apply(
-        label_func
-    )
-    train_df = train_df.rename(
-        columns={hscode_2_col: label_col }
-    )
-
+    print(train_df.columns)
 
     try:
         del train_df['HSCode']
     except:
         pass
 
+
+    def label_func(_val):
+        if  _val == '44': return 0
+        else: return 1
+
+    train_df = train_df.rename(
+        columns={hscode_2_col: label_col}
+    )
+
+    train_df[label_col] = train_df[label_col].parallel_apply(
+        label_func
+    )
+
     train_df, col_val2id_dict, domain_dims = convert_to_ids(
         train_df,
         save_dir
     )
-
+    print(train_df.columns)
     # -------------------------------
     # Create a serialized version
     # -------------------------------
