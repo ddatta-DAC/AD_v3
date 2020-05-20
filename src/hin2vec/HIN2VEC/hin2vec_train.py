@@ -76,21 +76,32 @@ class Hin2Vec():
                     param_group['lr'] = lr
         self.Hin2Vec_model.save_embedding(self.output_file_name,  use_cuda=self.use_cuda)
 
-
+# ========================================= #
 parser = argparse.ArgumentParser()
 parser.add_argument(
     '--data', choices=['dblp'],
     default='dblp'
 )
+args = parser.parse_args()
 # ========================================= #
 # Input format:
 # node_id_1, node_id_2, relation_type, 1 [ground truth]
 # ========================================= #
-source_data_DIR = ''
-os.path.join(source_data_DIR,'input_data.txt')
-input_file = 'example_training_data.txt'
 
-output_file = 'output_emb.txt'
+input_file = None
+DATA = args.data
+model_use_data_DIR = 'model_use_data'
+if os.path.exists(model_use_data_DIR):
+    os.mkdir(model_use_data_DIR)
+model_use_data_DIR = os.path.join(model_use_data_DIR, DATA)
+if os.path.exists(model_use_data_DIR):
+    os.mkdir(model_use_data_DIR)
+
+if DATA == 'dblp':
+    source_data_DIR = './../../../dblp/processed_data/DBLP'
+    input_file = os.path.join(source_data_DIR,'hin2vec_dblp_input.txt')
+
+output_file = os.path.join(model_use_data_DIR, 'output_emb.txt')
 
 
 # ---------------------- #

@@ -5,6 +5,8 @@ import torch.nn.functional as F
 import math
 import numpy as np
 import pickle
+from torch import LongTensor as LT
+DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class Hin2Vec_model(nn.Module):
 
@@ -50,8 +52,8 @@ class Hin2Vec_model(nn.Module):
         emb_attr1 = self.embeddings(attr1)
         emb_attr2 = self.embeddings(attr2)
         emb_rel = self.relation_embedding(rel)
-        sig_encoded_rel = F.sigmoid(emb_rel)
-        pred = F.sigmoid(torch.sum(emb_attr1 * emb_attr2 * sig_encoded_rel, dim=1))
+        sig_encoded_rel = torch.sigmoid(emb_rel)
+        pred = torch.sigmoid(torch.sum(emb_attr1 * emb_attr2 * sig_encoded_rel, dim=1))
         loss = -1 * (ground_truth * torch.log(pred + eps) + (1 - ground_truth) * torch.log(1 - pred + eps))
         loss1 = torch.sum(loss)
 
@@ -80,11 +82,11 @@ def test_look_up_emb():
     model = Hin2Vec_model(200, 5, 32)
     dtype = torch.FloatTensor
     attr1_id_np = np.random.randint(0,199,size=(2000,))
-    attr1_id = Variable(torch.LongTensor(attr1_id_np))
+    attr1_id = Variable(LT(attr1_id_np))
     attr2_id_np = np.random.randint(0,199,size=(2000,))
-    attr2_id = Variable(torch.LongTensor(attr2_id_np))
+    attr2_id = Variable(LT(attr2_id_np))
     rel_id_np = np.random.randint(0, 5, size=(2000,))
-    rel_id = Variable(torch.LongTensor(rel_id_np))
+    rel_id = Variable(LT(rel_id_np))
     gt = torch.rand(2000) > 0.4
     for i in range(2000):
         fout.write(str(attr1_id_np[i]) + ',' + str(attr2_id_np[i]) + ',' + str(rel_id_np[i]) + '\n')
