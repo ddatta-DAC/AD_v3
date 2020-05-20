@@ -32,8 +32,5 @@ src/**/__pycache__/**
 /src/Baseline_PathSim_1/model_use_data/
 /src/GraphEmb_2/model_use_data/
 /generated_data_v2/
-/AD_system_output_v2/
-/src/GAM/model_use_data/
-/src/GAM_base/model_use_data/
-/src/Ablation_1/model_use_data/
+/src/base_node2vec/model_use_data
 
