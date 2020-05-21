@@ -91,10 +91,10 @@ args = parser.parse_args()
 input_file = None
 DATA = args.data
 model_use_data_DIR = 'model_use_data'
-if os.path.exists(model_use_data_DIR):
+if not os.path.exists(model_use_data_DIR):
     os.mkdir(model_use_data_DIR)
 model_use_data_DIR = os.path.join(model_use_data_DIR, DATA)
-if os.path.exists(model_use_data_DIR):
+if not os.path.exists(model_use_data_DIR):
     os.mkdir(model_use_data_DIR)
 
 if DATA == 'dblp':
