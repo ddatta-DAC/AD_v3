@@ -39,7 +39,7 @@ num_neg_samples = None
 save_dir = None
 cleaned_csv_subdir = None
 hscode_2_col = 'HSCode_2'
-label_col =  'y_label'
+
 # -------------------------- #
 
 # -------------------------- #
@@ -48,13 +48,13 @@ def get_regex(_type):
     global DIR
     if DIR == 'us_import1':
         if _type == 'train':
-            return '.*0[3-6]_2015.csv'
+            return '.*0[3-5]_2015.csv'
         if _type == 'test':
             return '.*((07)|(08))_2015.csv'
 
     if DIR == 'us_import2':
         if _type == 'train':
-            return '.*0[3-6]_2016.csv'
+            return '.*0[3-5]_2016.csv'
         if _type == 'test':
             return '.*((07)|(08))_2016.csv'
 
@@ -168,7 +168,6 @@ def convert_to_ids(
             for e in enumerate(vals, 0)
         }
 
-
         val2id_dict = {
             v: k for k, v in id2val_dict.items()
         }
@@ -271,7 +270,6 @@ def remove_low_frequency_values(df):
 # ---------
 # This should be a custom clean up function
 # Taking hscode of type 4 only
-# Taking "normal" class as 44
 # ---------
 
 def HSCode_clean_select(
@@ -279,7 +277,7 @@ def HSCode_clean_select(
 ):
     global CONFIG
     hscode_col = 'HSCode'
-    hscode_2_col = hscode_col + '_2'
+    # hscode_2_col = hscode_col + '_2'
 
     def get_HSCode2(_code):
         return str(_code)[:2]
@@ -297,7 +295,7 @@ def HSCode_clean_select(
             val = [val]
         for v in val:
             if v[:1] == '4':
-                return v[:6]
+                return v[:2]
         return None
 
     list_processed_df = []
@@ -314,10 +312,6 @@ def HSCode_clean_select(
         )
         df = df.dropna()
 
-        df[hscode_2_col] = df[hscode_col].parallel_apply(
-            get_HSCode2
-        )
-
         if df is not None and len(df) > 0:
             df = df.dropna()
             list_processed_df.append(df)
@@ -325,7 +319,7 @@ def HSCode_clean_select(
     # --------- #
     print([len(_) for _ in list_processed_df])
     # ---------------
-    # join the dataframes
+    # join the data frames
     # ---------------
     merged_df = None
     for _df in list_processed_df:
@@ -338,7 +332,6 @@ def HSCode_clean_select(
             )
     print(merged_df.columns)
     return merged_df
-
 
 '''
 Apply :: column_value_filters
@@ -362,13 +355,14 @@ def apply_value_filters(list_df):
 # Lexically sorted columns
 # ---------------------------------------------------- #
 def lexical_sort_cols(df):
-    global label_col
     global id_col
-    rmv_cols = [id_col, label_col]
+    removed = []
+    rmv_cols = [id_col]
     feature_columns = list(df.columns)
     for rc in rmv_cols:
         try:
             feature_columns.remove(rc)
+            removed.append(rc)
         except:
             pass
 
@@ -408,8 +402,7 @@ def create_data_sets():
     global column_value_filters
     global CONFIG
     global DIR_LOC
-    global hscode_2_col
-    global label_col
+
 
     train_df_file = os.path.join(save_dir, 'train_data.csv')
     column_valuesId_dict_file = 'column_valuesId_dict.pkl'
@@ -427,82 +420,7 @@ def create_data_sets():
         return train_df, col_val2id_dict
 
     train_df = clean_train_data()
-
-    # ===============
-    # Non interesting 44
-    # Assumption that interesting : non-interesting entity ratio is 1 : 4 (20%)
-    # ===============
-
-    # We are targeting Consignee IDs; exclude overlapping
-    exclude_consigneeids = set(train_df.loc[
-        train_df[hscode_2_col] == '44']['ConsigneePanjivaID'])
-
-    print('exclude consigneeid', len(exclude_consigneeids))
-    non_interesting_data = pd.DataFrame(
-        train_df.loc[train_df[hscode_2_col] == '44'],
-        copy=True
-    )
-
-    # get the 3 2-digit HS codes that are not 44
-    k = 3
-    top_k = list(train_df.loc[train_df[hscode_2_col] != '44'].groupby(
-        by= [hscode_2_col]).size().reset_index(
-        name='count').sort_values(
-        by='count',ascending=False).head(k)[hscode_2_col])
-
-    print(train_df.groupby(by=[hscode_2_col]).size().reset_index(name='count'))
-
-    interesting_data = None
-    factor = 3
-    for _hscode2 in top_k:
-        tmp_df = train_df.loc[
-            (train_df[hscode_2_col] == _hscode2) &
-            (~train_df['ConsigneePanjivaID'].isin(exclude_consigneeids))
-        ]
-
-        all_con = list(set(tmp_df['ConsigneePanjivaID']))
-        consignees = np.random.choice(
-            all_con,
-            size = len(all_con) // (factor*k),
-            replace= False
-        )
-
-        tmp_df = tmp_df.loc[tmp_df['ConsigneePanjivaID'].isin(consignees)]
-        if interesting_data is None:
-            interesting_data = tmp_df.copy()
-        else:
-            interesting_data = interesting_data.append(
-                tmp_df,
-                ignore_index=True
-            )
-
-
-    print( len(interesting_data) )
-    print(interesting_data.columns)
-    print( len(non_interesting_data) )
-    print(non_interesting_data.columns)
-    print(len(set(non_interesting_data['ConsigneePanjivaID'])), len(set(interesting_data['ConsigneePanjivaID'])))
-
-    train_df = interesting_data.append(non_interesting_data,ignore_index=True)
     print(train_df.columns)
-
-    try:
-        del train_df['HSCode']
-    except:
-        pass
-
-
-    def label_func(_val):
-        if  _val == '44': return 0
-        else: return 1
-
-    train_df = train_df.rename(
-        columns={hscode_2_col: label_col}
-    )
-
-    train_df[label_col] = train_df[label_col].parallel_apply(
-        label_func
-    )
 
     train_df, col_val2id_dict, domain_dims = convert_to_ids(
         train_df,

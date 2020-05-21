@@ -26,7 +26,7 @@
     'Carrier':
       - '(Usa))'
   'num_neg_samples_ape': 3
-  'low_freq_bound': 5
+  'low_freq_bound': 3
   'company_domain_columns':
     - 'ShipperPanjivaID'
     - 'ConsigneePanjivaID'
