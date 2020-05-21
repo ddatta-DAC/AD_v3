@@ -4,13 +4,15 @@ import os
 import sys
 sys.path.append('./..')
 sys.path.append('./../..')
-
+import argparse
 import pickle
 import torch
 import stellargraph as sg
 
 from AD_v3.src.mp2vec import run_m2pv
 from AD_v3.src.node2vec import run_n2v
+from AD_v3.src.hin2vec import run_hin2vec
+
 # ------------------- #
 
 '''
@@ -93,15 +95,20 @@ def create_data(
             _df = pd.DataFrame(data =_list, columns=[node_type])
             _df = _df.set_index(node_type)
             dict_node_df[node_type] = _df
-        del train_edges['rel']
-        del test_edges['rel']
+        try:
+            del train_edges['rel']
+            del test_edges['rel']
+        except:
+            pass
 
         fpath = os.path.join(data_save_path, 'train_edges.csv')
         train_edges.to_csv(fpath,index=False)
         fpath = os.path.join(data_save_path, 'test_edges.csv')
         test_edges.to_csv(fpath, index=False)
-        # Save
-        with open(os.path.join(model_use_data_DIR,'dict_node_df.csv'),'wb') as fh:
+        # ----------------
+        # Save the dict
+        # ----------------
+        with open(os.path.join(data_save_path,'dict_node_df.pkl'),'wb') as fh:
             pickle.dump(
                 dict_node_df, fh, pickle.HIGHEST_PROTOCOL
             )
@@ -123,7 +130,6 @@ def prepare_data(dataset):
     if dataset == 'dblp':
         base_train_edges_file = 'base_train_edges.csv'
         base_test_edges_file = 'base_test_edges.csv'
-
         input_dir = './../../dblp/processed_data/'
 
         # =====
@@ -237,15 +243,16 @@ def prepare_data(dataset):
     )
     return
 
-def exec( _method ):
+def exec(_dataset,  _method ):
     global model_use_data_DIR
     global model_save_data_DIR
-
+    if not os.path.exists(os.path.join(model_save_data_DIR, _method)):
+        os.path.join(model_save_data_DIR, _method)
     data_src_dir = os.path.join(model_use_data_DIR, _method)
     if _method == 'node2vec':
         # run metapath2vec
         run_n2v.setup(
-            'dblp',
+            _dataset,
             _model_save_path=model_save_data_DIR,
             _model_use_data_DIR=model_use_data_DIR
         )
@@ -255,17 +262,18 @@ def exec( _method ):
 
         train_edges = pd.read_csv(
             os.path.join(data_src_dir,'train_edges.csv'),
-            index=None
+            index_col=None
         )
-        run_n2v.execute_model(
+        node_embeddings = run_n2v.execute_model(
             dict_node_df,
             train_edges
         )
+        output_file_name = os.path.join(model_save_data_DIR, _method, 'embeddings.npy')
+        np.save(output_file_name, node_embeddings)
 
     elif _method == 'mp2vec':
-        # run metapath2vec
         run_m2pv.setup(
-            'dblp',
+            _dataset,
             _model_save_path=model_save_data_DIR,
             _model_use_data_DIR=model_use_data_DIR
         )
@@ -275,27 +283,42 @@ def exec( _method ):
             os.path.join(data_src_dir, 'train_edges.csv'),
             index=None
         )
-        run_m2pv.execute_model(
+        node_embeddings = run_m2pv.execute_model(
             dict_node_df,
             train_edges
         )
+        output_file_name = os.path.join(model_save_data_DIR, _method, 'embeddings.npy')
+        np.save(output_file_name, node_embeddings)
 
     elif _method == 'hin2vec':
-        print(' to do ..')
-        # run metapath2vec
-        # run_m2pv.setup(
-        #     'dblp',
-        #     _model_save_path=model_save_data_DIR,
-        #     _model_use_data_DIR=model_use_data_DIR
-        # )
-        #
-        # run_m2pv.execute_model(
-        #     dict_node_df,
-        #     train_edges
-        # )
+        src_dir = os.path.join(model_use_data_DIR, _method )
+        input_file_name = os.path.join(src_dir,'train_edges.txt')
 
-dataset = 'dblp'
-setup(dataset)
-prepare_data('dblp')
-_method = 'node2vec'
-exec( _method )
+
+        output_file_name = os.path.join(model_save_data_DIR, _method, 'embeddings.npy')
+        run_hin2vec.exec(
+            _dataset,
+            input_file_name=input_file_name,
+            output_file_name=output_file_name,
+            model_use_data_DIR=None
+        )
+
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    '--dataset', choices=['dblp'],
+    default='dblp'
+)
+parser.add_argument(
+    '--method',choices=['node2vec','hin2vec','mp2vec'],
+    default=['node2vec']
+)
+args = parser.parse_args()
+
+
+_dataset = args.dataset
+_method = args.dataset
+setup(_dataset)
+prepare_data(_dataset)
+exec(_dataset, _method )

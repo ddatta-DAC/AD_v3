@@ -91,44 +91,30 @@ class Hin2Vec():
         )
 
 # ========================================= #
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    '--data', choices=['dblp'],
-    default='dblp'
-)
-parser.add_argument(
-    '--emd_dim',
-    default=128
-)
-args = parser.parse_args()
+
 # ========================================= #
 # Input format:
 # node_id_1, node_id_2, relation_type, 1 [ground truth]
 # ========================================= #
 
-input_file = None
-DATA = args.data
-emb_dimension = args.emd_dim
-model_use_data_DIR = 'model_use_data'
-batch_size = 64
-num_epochs = 100000  # keeping
-if not os.path.exists(model_use_data_DIR):
-    os.mkdir(model_use_data_DIR)
-model_use_data_DIR = os.path.join(model_use_data_DIR, DATA)
-if not os.path.exists(model_use_data_DIR):
-    os.mkdir(model_use_data_DIR)
+def exec(
+        _dataset,
+        input_file_name =None,
+        output_file_name =None,
+        model_use_data_DIR = None,
+        emb_dimension=128,
+        batch_size = 64,
+        iteration = 100000
+):
+    if output_file_name is None:
+        output_file_name = os.path.join(model_use_data_DIR, 'output_emb.npy')
 
-if DATA == 'dblp':
-    source_data_DIR = './../../dblp/processed_data/DBLP'
-    input_file = os.path.join(source_data_DIR,'hin2vec_dblp_input.txt')
+    print(' Output file :: ', output_file_name )
+    h2v = Hin2Vec(
+        input_file_name=input_file_name,
+        output_file_name=output_file_name,
+        emb_dimension=emb_dimension
+    )
+    h2v.train()
+    return output_file_name
 
-output_file = os.path.join(model_use_data_DIR, 'output_emb.txt')
-# ---------------------- #
-h2v = Hin2Vec(
-    input_file_name=input_file,
-    output_file_name=output_file,
-    emb_dimension = emb_dimension,
-    batch_size = batch_size,
-    iteration= num_epochs
-)
-h2v.train()

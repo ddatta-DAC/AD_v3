@@ -74,12 +74,16 @@ class Hin2Vec_model(nn.Module):
         else:
             embedding = self.embeddings.weight.data.numpy()
         # Save as output as numpy array
-        np.save(file_name, embedding)
-        # with open(file_name, 'wb') as fout:
-        #     pickle.dump(embedding, fout, pickle.HIGHEST_PROTOCOL)
-        # fout.close()
+        arr = [embedding]
 
-
+        if use_cuda:
+            embedding = self.relation_embedding.weight.cpu().data.numpy()
+        else:
+            embedding = self.relation_embedding.weight.data.numpy()
+        arr.append(embedding)
+        arr = np.array(arr)
+        np.save(file_name, arr)
+        return
 
 
 def test_look_up_emb():
