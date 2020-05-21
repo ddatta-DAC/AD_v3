@@ -10,7 +10,11 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class Hin2Vec_model(nn.Module):
 
-    def __init__(self, input_data_size, relation_size, embedding_dim):
+    def __init__(self,
+                 input_data_size,
+                 relation_size,
+                 embedding_dim
+        ):
         '''
 
         :param input_data_size:number of node in the graph, node has to be same type
@@ -67,12 +71,13 @@ class Hin2Vec_model(nn.Module):
         '''
         if use_cuda:
             embedding = self.embeddings.weight.cpu().data.numpy()
-
         else:
             embedding = self.embeddings.weight.data.numpy()
-        fout = open(file_name, 'wb')
-        pickle.dump(embedding, fout)
-        fout.close()
+        # Save as output as numpy array
+        np.save(file_name, embedding)
+        # with open(file_name, 'wb') as fout:
+        #     pickle.dump(embedding, fout, pickle.HIGHEST_PROTOCOL)
+        # fout.close()
 
 
 
@@ -107,9 +112,6 @@ def test_look_up_emb():
                 print(i, float(loss))
             loss.backward()
             optimizer.step()
-
-
-
 
 
 

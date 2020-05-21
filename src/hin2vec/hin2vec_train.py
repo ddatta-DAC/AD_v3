@@ -3,7 +3,7 @@ import numpy as np
 import sys
 sys.path.append('./..')
 import argparse
-
+from torch import LongTensor as LT
 try:
     from .data import InputData
     from .hin2vec_model import Hin2Vec_model
@@ -32,7 +32,13 @@ class Hin2Vec():
         self.batch_size = batch_size
         self.iteration = iteration
         self.initial_lr = initial_lr
-        self.Hin2Vec_model = Hin2Vec_model(self.data.attr_size, self.data.rel_size, self.emb_dimension)
+
+        print(emb_dimension)
+        self.Hin2Vec_model = Hin2Vec_model(
+            self.data.attr_size,
+            self.data.rel_size,
+            self.emb_dimension
+        )
         self.use_cuda = torch.cuda.is_available()
         if self.use_cuda:
             self.Hin2Vec_model.cuda()
@@ -51,10 +57,10 @@ class Hin2Vec():
         for i in process_bar:
             e1, e2, rel_ids, ground_truth  = self.data.generate_batch_sampling(self.neg_sample_size)
 
-            e1 = Variable(torch.LongTensor(e1))
-            e2 = Variable(torch.LongTensor(e2))
-            rel_ids = Variable(torch.LongTensor(rel_ids))
-            ground_truth = Variable(torch.FloatTensor(ground_truth))
+            e1 = Variable(LT(e1))
+            e2 = Variable(LT(e2))
+            rel_ids = Variable(LT(rel_ids))
+            ground_truth = Variable(LT(ground_truth))
 
 
             if self.use_cuda:
@@ -67,14 +73,22 @@ class Hin2Vec():
             loss.backward()
             self.optimizer.step()
 
-            process_bar.set_description("Loss: %0.8f, lr: %0.6f" %
-                                        (loss.item() / self.batch_size,
-                                         self.optimizer.param_groups[0]['lr']))
-            if i * self.batch_size % 100000 == 0:
+            process_bar.set_description(
+                "Loss: %0.8f, lr: %0.6f" % (
+                    loss.item() / self.batch_size,
+                    self.optimizer.param_groups[0]['lr'])
+            )
+
+            if i * self.batch_size % 10000 == 0:
                 lr = self.initial_lr * (1.0 - 1.0 * i / batch_count)
                 for param_group in self.optimizer.param_groups:
                     param_group['lr'] = lr
-        self.Hin2Vec_model.save_embedding(self.output_file_name,  use_cuda=self.use_cuda)
+
+        # --- Save embedding ---- #
+        self.Hin2Vec_model.save_embedding(
+            self.output_file_name,
+            use_cuda=self.use_cuda
+        )
 
 # ========================================= #
 parser = argparse.ArgumentParser()
@@ -82,6 +96,11 @@ parser.add_argument(
     '--data', choices=['dblp'],
     default='dblp'
 )
+parser.add_argument(
+    '--emd_dim',
+    default=128
+)
+
 args = parser.parse_args()
 # ========================================= #
 # Input format:
@@ -90,7 +109,10 @@ args = parser.parse_args()
 
 input_file = None
 DATA = args.data
+emb_dimension = args.emd_dim
 model_use_data_DIR = 'model_use_data'
+batch_size = 64
+num_epochs = 100000//batch_size # keeping
 if not os.path.exists(model_use_data_DIR):
     os.mkdir(model_use_data_DIR)
 model_use_data_DIR = os.path.join(model_use_data_DIR, DATA)
@@ -98,12 +120,17 @@ if not os.path.exists(model_use_data_DIR):
     os.mkdir(model_use_data_DIR)
 
 if DATA == 'dblp':
-    source_data_DIR = './../../../dblp/processed_data/DBLP'
+    source_data_DIR = './../../dblp/processed_data/DBLP'
     input_file = os.path.join(source_data_DIR,'hin2vec_dblp_input.txt')
 
 output_file = os.path.join(model_use_data_DIR, 'output_emb.txt')
-
-
 # ---------------------- #
-h2v = Hin2Vec(input_file_name=input_file, output_file_name=output_file)
+h2v = Hin2Vec(
+    input_file_name=input_file,
+    output_file_name=output_file,
+    emb_dimension = emb_dimension,
+    batch_size = batch_size,
+    iteration= num_epochs
+
+)
 h2v.train()
