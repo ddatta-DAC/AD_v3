@@ -22,7 +22,8 @@ metapaths = None
 walk_length = 64
 num_walks_per_node = 25
 emb_dim = 128
-
+model_use_data_DIR = None
+model_save_path = None
 
 def setup(
         dataset,
