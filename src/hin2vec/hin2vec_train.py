@@ -112,7 +112,7 @@ DATA = args.data
 emb_dimension = args.emd_dim
 model_use_data_DIR = 'model_use_data'
 batch_size = 64
-num_epochs = 100000//batch_size # keeping
+num_epochs = 100000  # keeping
 if not os.path.exists(model_use_data_DIR):
     os.mkdir(model_use_data_DIR)
 model_use_data_DIR = os.path.join(model_use_data_DIR, DATA)
