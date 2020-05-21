@@ -40,6 +40,7 @@ def setup(dataset):
     if not os.path.exists(model_save_data_DIR):
         os.mkdir(model_save_data_DIR)
 
+    return
 
 
 def create_data(
@@ -125,7 +126,6 @@ def create_data(
 
 def prepare_data(dataset):
     global model_use_data_DIR
-    global model_save_data_DIR
     node_dict = None
     train_edges = None
     test_edges = None
@@ -251,7 +251,8 @@ def exec(_dataset,  _method ):
     global model_save_data_DIR
 
     if not os.path.exists(os.path.join(model_save_data_DIR, _method)):
-        os.path.join(model_save_data_DIR, _method)
+        os.mkdir(os.path.join(model_save_data_DIR, _method))
+
     data_src_dir = os.path.join(model_use_data_DIR, _method)
 
     # ==================================== #
