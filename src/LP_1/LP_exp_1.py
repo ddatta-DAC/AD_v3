@@ -249,6 +249,7 @@ def prepare_data(dataset):
 def exec(_dataset,  _method ):
     global model_use_data_DIR
     global model_save_data_DIR
+
     if not os.path.exists(os.path.join(model_save_data_DIR, _method)):
         os.path.join(model_save_data_DIR, _method)
     data_src_dir = os.path.join(model_use_data_DIR, _method)
@@ -316,8 +317,8 @@ parser.add_argument(
     default='dblp'
 )
 parser.add_argument(
-    '--method',choices=['node2vec','hin2vec','mp2vec'],
-    default=['node2vec']
+    '--method', choices=['node2vec','hin2vec','mp2vec'],
+    default='node2vec'
 )
 args = parser.parse_args()
 _dataset = args.dataset
