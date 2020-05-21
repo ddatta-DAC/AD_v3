@@ -1,6 +1,7 @@
 venv/**
 *.pyc
 generated_data/**
+/src/**/model_use_data/**
 /generated_data_v1_old/
 /generated_data_v1/**
 /generated_data_v0/**
@@ -20,17 +21,4 @@ src/**/__pycache__/**
 /generated_data_v1/
 /generated_data_v0/
 /Data_Raw/
-/src/data_preprocessor/.ipynb_checkpoints/
-/experimental/
-/src/GraphEmb_1/saved_data/
-/src/GraphEmb_1/entity2vec_gensim/data/
-/src/base_node2vec/model_use_data/
-/src/MEAD/output/
-/src/MEAD/save_dir/
-/AD_system_output/
-/src/Baseline_SimRank_1/model_use_data/
-/src/Baseline_PathSim_1/model_use_data/
-/src/GraphEmb_2/model_use_data/
-/generated_data_v2/
-/src/base_node2vec/model_use_data
 
