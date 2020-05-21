@@ -22,3 +22,4 @@ src/**/__pycache__/**
 /generated_data_v0/
 /Data_Raw/
 
+/src/LP_1/model_use_data/
