@@ -8,11 +8,14 @@ import argparse
 import pickle
 import torch
 import stellargraph as sg
-
-from AD_v3.src.mp2vec import run_m2pv
-from AD_v3.src.node2vec import run_n2v
-from AD_v3.src.hin2vec import run_hin2vec
-
+try :
+    from src.mp2vec import run_m2pv
+    from src.node2vec import run_n2v
+    from src.hin2vec import run_hin2vec
+except:
+    from .src.mp2vec import run_m2pv
+    from .src.node2vec import run_n2v
+    from .src.hin2vec import run_hin2vec
 # ------------------- #
 
 '''
@@ -249,8 +252,10 @@ def exec(_dataset,  _method ):
     if not os.path.exists(os.path.join(model_save_data_DIR, _method)):
         os.path.join(model_save_data_DIR, _method)
     data_src_dir = os.path.join(model_use_data_DIR, _method)
+
+    # ==================================== #
     if _method == 'node2vec':
-        # run metapath2vec
+        print('Running Node2vec')
         run_n2v.setup(
             _dataset,
             _model_save_path=model_save_data_DIR,
@@ -272,6 +277,7 @@ def exec(_dataset,  _method ):
         np.save(output_file_name, node_embeddings)
 
     elif _method == 'mp2vec':
+        print('Running metapath2vec')
         run_m2pv.setup(
             _dataset,
             _model_save_path=model_save_data_DIR,
@@ -291,10 +297,9 @@ def exec(_dataset,  _method ):
         np.save(output_file_name, node_embeddings)
 
     elif _method == 'hin2vec':
+        print('Running HN2vec')
         src_dir = os.path.join(model_use_data_DIR, _method )
         input_file_name = os.path.join(src_dir,'train_edges.txt')
-
-
         output_file_name = os.path.join(model_save_data_DIR, _method, 'embeddings.npy')
         run_hin2vec.exec(
             _dataset,
@@ -302,8 +307,8 @@ def exec(_dataset,  _method ):
             output_file_name=output_file_name,
             model_use_data_DIR=None
         )
-
-
+    else:
+        print('Invalid method!!', _method)
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -315,10 +320,9 @@ parser.add_argument(
     default=['node2vec']
 )
 args = parser.parse_args()
-
-
 _dataset = args.dataset
-_method = args.dataset
+_method = args.method
+
 setup(_dataset)
 prepare_data(_dataset)
-exec(_dataset, _method )
+exec(_dataset=_dataset, _method=_method )
