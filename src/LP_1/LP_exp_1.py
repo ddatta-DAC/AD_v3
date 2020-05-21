@@ -288,7 +288,7 @@ def exec(_dataset,  _method ):
             dict_node_df = pickle.load(fh)
         train_edges = pd.read_csv(
             os.path.join(data_src_dir, 'train_edges.csv'),
-            index=None
+            index_col=None
         )
         node_embeddings = run_m2pv.execute_model(
             dict_node_df,

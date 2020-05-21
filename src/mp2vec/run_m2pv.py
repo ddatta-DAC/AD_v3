@@ -11,6 +11,7 @@ sys.path.append('./..')
 sys.path.append('./../..')
 from gensim.models import Word2Vec
 from stellargraph.data import UniformRandomMetaPathWalk
+from stellargraph.data import BiasedRandomWalk
 from stellargraph import StellarGraph
 import multiprocessing
 import matplotlib.pyplot as plt
@@ -48,7 +49,7 @@ def setup(
         model_save_path = _model_save_path
     if not os.path.exists(model_save_path):
         os.mkdir(model_save_path)
-    model_save_path = os.path.join(model_save_path, 'DBLP')
+    model_save_path = os.path.join(model_save_path, 'mp2vec')
     if not os.path.exists(model_save_path):
         os.mkdir(model_save_path)
 
@@ -59,7 +60,7 @@ def setup(
 
     if not os.path.exists(model_use_data_DIR):
         os.mkdir(model_use_data_DIR)
-    model_use_data_DIR = os.path.join(model_use_data_DIR, 'DBLP')
+    model_use_data_DIR = os.path.join(model_use_data_DIR, 'mp2vec')
     if not os.path.exists(model_use_data_DIR):
         os.mkdir(model_use_data_DIR)
 

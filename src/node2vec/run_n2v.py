@@ -10,7 +10,7 @@ import sys
 sys.path.append('./..')
 sys.path.append('./../..')
 from gensim.models import Word2Vec
-from stellargraph.data import UniformRandomMetaPathWalk
+from stellargraph.data import BiasedRandomWalk
 from stellargraph import StellarGraph
 import multiprocessing
 import matplotlib.pyplot as plt
@@ -21,7 +21,8 @@ metapaths = None
 walk_length = 64
 num_walks_per_node = 25
 emb_dim = 128
-
+model_use_data_DIR = None
+model_save_path = None
 
 def setup(
         dataset,
@@ -35,26 +36,23 @@ def setup(
     global model_use_data_DIR
 
     emb_dim = _emb_dim
-
-
     if _model_save_path is None:
-        model_save_path = 'model_save_dir'
+        model_save_path = 'model_save_data'
     else:
         model_save_path = _model_save_path
     if not os.path.exists(model_save_path):
         os.mkdir(model_save_path)
-    model_save_path = os.path.join(model_save_path, 'DBLP')
+    model_save_path = os.path.join(model_save_path, 'node2vec')
     if not os.path.exists(model_save_path):
         os.mkdir(model_save_path)
 
     if _model_use_data_DIR is None:
         model_use_data_DIR = _model_use_data_DIR
     else:
-        model_use_data_DIR = 'model_save_dir'
-
+        model_use_data_DIR = 'model_use_data'
     if not os.path.exists(model_use_data_DIR):
         os.mkdir(model_use_data_DIR)
-    model_use_data_DIR = os.path.join(model_use_data_DIR, 'DBLP')
+    model_use_data_DIR = os.path.join(model_use_data_DIR, 'node2vec')
     if not os.path.exists(model_use_data_DIR):
         os.mkdir(model_use_data_DIR)
 
@@ -115,6 +113,7 @@ def execute_model(
 ):
     global dataset
     global model_save_path
+    global _model_use_data_DIR
 
     emb_fpath = os.path.join(
         model_save_path,
