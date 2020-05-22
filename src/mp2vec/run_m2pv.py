@@ -58,7 +58,7 @@ def setup(
     if _model_use_data_DIR is None:
         model_use_data_DIR = _model_use_data_DIR
     else:
-        model_use_data_DIR = 'model_save_dir'
+        model_use_data_DIR = 'model_save_data'
 
     if not os.path.exists(model_use_data_DIR):
         os.mkdir(model_use_data_DIR)
@@ -131,7 +131,7 @@ def execute_model(
 
     emb_fpath = os.path.join(
         model_save_path,
-        'mp2v_{}_{}_{}.npy'.format(
+        'n2v_{}_{}_{}.npy'.format(
             emb_dim, num_walks_per_node, walk_length)
     )
     graph_obj = StellarGraph(
@@ -139,7 +139,7 @@ def execute_model(
         df_edges
     )
 
-    walks_save_file = "mp2v_random_walks_{}_{}.npy".format(walk_length, num_walks_per_node)
+    walks_save_file = "n2v_random_walks_{}_{}.npy".format(walk_length, num_walks_per_node)
     walks_save_file = os.path.join(model_use_data_DIR, walks_save_file)
     try:
         walks_np_arr = np.load(walks_save_file)
