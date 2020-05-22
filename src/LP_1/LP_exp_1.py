@@ -254,63 +254,72 @@ def exec(_dataset,  _method ):
         os.mkdir(os.path.join(model_save_data_DIR, _method))
 
     data_src_dir = os.path.join(model_use_data_DIR, _method)
-
+    output_file_name = os.path.join(model_save_data_DIR, _method, 'embeddings.npy')
     # ==================================== #
-    if _method == 'node2vec':
-        print('Running Node2vec')
-        run_n2v.setup(
-            _dataset,
-            _model_save_path=model_save_data_DIR,
-            _model_use_data_DIR=model_use_data_DIR
-        )
-
-        with open (os.path.join(data_src_dir,'dict_node_df.pkl'),'rb') as fh :
-            dict_node_df = pickle.load(fh)
-
-        train_edges = pd.read_csv(
-            os.path.join(data_src_dir,'train_edges.csv'),
-            index_col=None
-        )
-        node_embeddings = run_n2v.execute_model(
-            dict_node_df,
-            train_edges
-        )
-        output_file_name = os.path.join(model_save_data_DIR, _method, 'embeddings.npy')
-        np.save(output_file_name, node_embeddings)
-
-    elif _method == 'mp2vec':
-        print('Running metapath2vec')
-        run_m2pv.setup(
-            _dataset,
-            _model_save_path=model_save_data_DIR,
-            _model_use_data_DIR=model_use_data_DIR
-        )
-        with open(os.path.join(data_src_dir, 'dict_node_df.pkl'), 'rb') as fh:
-            dict_node_df = pickle.load(fh)
-        train_edges = pd.read_csv(
-            os.path.join(data_src_dir, 'train_edges.csv'),
-            index_col=None
-        )
-        node_embeddings = run_m2pv.execute_model(
-            dict_node_df,
-            train_edges
-        )
-        output_file_name = os.path.join(model_save_data_DIR, _method, 'embeddings.npy')
-        np.save(output_file_name, node_embeddings)
-
-    elif _method == 'hin2vec':
-        print('Running HN2vec')
-        src_dir = os.path.join(model_use_data_DIR, _method )
-        input_file_name = os.path.join(src_dir,'train_edges.txt')
-        output_file_name = os.path.join(model_save_data_DIR, _method, 'embeddings.npy')
-        run_hin2vec.exec(
-            _dataset,
-            input_file_name=input_file_name,
-            output_file_name=output_file_name,
-            model_use_data_DIR=None
-        )
+    node_emb = None
+    if  os.path.exists(output_file_name):
+        if _method == 'node2vec' or _method == 'mp2vec':
+            node_emb = np.load(output_file_name,allow_pickle=True)
+        elif _method == 'hin2vec' :
+            emb = np.load(output_file_name, allow_pickle=True)
+            node_emb = emb[0]
+            rel_emb = emb[1]
     else:
-        print('Invalid method!!', _method)
+        if _method == 'node2vec':
+            print('Running Node2vec')
+            run_n2v.setup(
+                _dataset,
+                _model_save_path=model_save_data_DIR,
+                _model_use_data_DIR=model_use_data_DIR
+            )
+
+            with open (os.path.join(data_src_dir,'dict_node_df.pkl'),'rb') as fh :
+                dict_node_df = pickle.load(fh)
+
+            train_edges = pd.read_csv(
+                os.path.join(data_src_dir,'train_edges.csv'),
+                index_col=None
+            )
+            node_embeddings = run_n2v.execute_model(
+                dict_node_df,
+                train_edges
+            )
+
+            np.save(output_file_name, node_embeddings)
+
+        elif _method == 'mp2vec':
+            print('Running metapath2vec')
+            run_m2pv.setup(
+                _dataset,
+                _model_save_path=model_save_data_DIR,
+                _model_use_data_DIR=model_use_data_DIR
+            )
+            with open(os.path.join(data_src_dir, 'dict_node_df.pkl'), 'rb') as fh:
+                dict_node_df = pickle.load(fh)
+            train_edges = pd.read_csv(
+                os.path.join(data_src_dir, 'train_edges.csv'),
+                index_col=None
+            )
+            node_embeddings = run_m2pv.execute_model(
+                dict_node_df,
+                train_edges
+            )
+
+            np.save(output_file_name, node_embeddings)
+
+        elif _method == 'hin2vec':
+            print('Running HN2vec')
+            src_dir = os.path.join(model_use_data_DIR, _method )
+            input_file_name = os.path.join(src_dir,'train_edges.txt')
+
+            run_hin2vec.exec(
+                _dataset,
+                input_file_name=input_file_name,
+                output_file_name=output_file_name,
+                model_use_data_DIR=None
+            )
+        else:
+            print('Invalid method!!', _method)
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
