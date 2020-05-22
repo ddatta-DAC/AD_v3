@@ -20,7 +20,7 @@ from tqdm import tqdm
 
 metapaths = None
 walk_length = 64
-num_walks_per_node = 25
+num_walks_per_node = 10
 emb_dim = 128
 model_use_data_DIR = None
 model_save_path = None
@@ -42,6 +42,7 @@ def setup(
             ["A", "P", "A"],
             ["A", "P", "T", "P", "A"],
             ["A", "P", "C", "P", "A"],
+            ["T", "P", "T"]
         ]
 
     if _model_save_path is None:
@@ -62,6 +63,7 @@ def setup(
     if not os.path.exists(model_use_data_DIR):
         os.mkdir(model_use_data_DIR)
     model_use_data_DIR = os.path.join(model_use_data_DIR, 'mp2vec')
+
     if not os.path.exists(model_use_data_DIR):
         os.mkdir(model_use_data_DIR)
 
