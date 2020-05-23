@@ -178,6 +178,8 @@ def create_neg_test_samples(dataset):
         df = pd.DataFrame(data=arr,columns=['source','target'])
         op_file_path = os.path.join(model_use_data_DIR,'base_neg_test_edges.csv')
         df.to_csv(op_file_path)
+        return
+
 
 
 
@@ -269,7 +271,7 @@ def prepare_data(dataset):
             train_edges = train_edges.append(edges_df)
             train_edges.to_csv(base_train_edges_file,index=False)
             test_edges.to_csv(base_test_edges_file, index=False)
-
+            create_neg_test_samples(_dataset)
     print('Train edges : ', len(train_edges), 'Test edges : ', len(test_edges))
 
     '''
@@ -302,6 +304,8 @@ def prepare_data(dataset):
         node_dict=node_dict,
         data_save_path=model_use_data_DIR
     )
+
+
     return
 
 def exec(_dataset,  _method ):
@@ -394,5 +398,4 @@ _method = args.method
 
 setup(_dataset)
 prepare_data(_dataset)
-create_neg_test_samples(_dataset)
-# exec(_dataset=_dataset, _method=_method )
+exec(_dataset=_dataset, _method=_method )
