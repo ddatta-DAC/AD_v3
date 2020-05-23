@@ -4,6 +4,8 @@ import os
 import sys
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import roc_curve
+from sklearn.linear_model import LogisticRegression
+
 sys.path.append('./..')
 sys.path.append('./../..')
 import argparse
@@ -130,11 +132,14 @@ def create_data(
     return
 
 def create_neg_test_samples(dataset):
+
     global model_use_data_DIR
-    input_dir = './../../dblp/processed_data/'
+    op_file_path = os.path.join(model_use_data_DIR, 'base_neg_test_edges.csv')
+    base_train_edges_file = os.path.join(model_use_data_DIR, 'base_train_edges.csv')
+    base_test_edges_file = os.path.join(model_use_data_DIR, 'base_test_edges.csv')
+
     if dataset == 'dblp':
-        base_train_edges_file = os.path.join(model_use_data_DIR, 'base_train_edges.csv')
-        base_test_edges_file = os.path.join(model_use_data_DIR, 'base_test_edges.csv')
+        input_dir = './../../dblp/processed_data/'
         train_edges = pd.read_csv(base_train_edges_file, index_col=None)
         test_edges = pd.read_csv(base_test_edges_file, index_col=None)
 
@@ -167,8 +172,6 @@ def create_neg_test_samples(dataset):
                 t = np.random.choice(target_set,1)[0]
                 if len(ref_df.loc[ (ref_df['source']==s) & (ref_df['target']==t) ]) == 0:
                     break
-
-            print(' >> Found :', trial , '|| [',s,t,']')
             return [s,t]
 
         n_jobs =  multiprocessing.cpu_count()
@@ -178,13 +181,9 @@ def create_neg_test_samples(dataset):
 
         arr = np.array(res)
         df = pd.DataFrame(data=arr,columns=['source','target'])
-        op_file_path = os.path.join(model_use_data_DIR,'base_neg_test_edges.csv')
+
         df.to_csv(op_file_path)
         return
-
-
-
-
 
 def prepare_data(dataset):
     global model_use_data_DIR
@@ -273,7 +272,11 @@ def prepare_data(dataset):
             train_edges = train_edges.append(edges_df)
             train_edges.to_csv(base_train_edges_file,index=False)
             test_edges.to_csv(base_test_edges_file, index=False)
+
+        base_test_neg_edges_file = os.path.join(model_use_data_DIR, 'base_neg_test_edges.csv')
+        if not os.path.exists(base_test_neg_edges_file):
             create_neg_test_samples(_dataset)
+
     print('Train edges : ', len(train_edges), 'Test edges : ', len(test_edges))
 
     '''
@@ -298,7 +301,6 @@ def prepare_data(dataset):
         data_save_path=model_use_data_DIR
     )
 
-
     create_data(
         _method='mp2vec',
         train_edges=train_edges,
@@ -307,10 +309,9 @@ def prepare_data(dataset):
         data_save_path=model_use_data_DIR
     )
 
-
     return
 
-def exec(_dataset,  _method ):
+def exec(_dataset, _method):
     global model_use_data_DIR
     global model_save_data_DIR
 
@@ -392,38 +393,132 @@ def exec(_dataset,  _method ):
     return node_emb
 
 # ============================================== #
-def calculate_P(node_emb, node1, node2):
-    e1 = node_emb[node1]
-    e2 = node_emb[node2]
-    # p = Sigmoid( e1 . e2 )
-    z = 1 / (1 + np.exp(-np.dot(e1,e2)))
-    return z
+# def calculate_P(node_emb, node1, node2):
+#     e1 = node_emb[node1]
+#     e2 = node_emb[node2]
+#     # p = Sigmoid( e1 . e2 )
+#     z = 1 / (1 + np.exp(-np.dot(e1,e2)))
+#     return z
+
+# ====================
+# Generate 0 label data for classifier that does LP
+# ====================
+def  generate_LP_clf_neg_samples(
+            source_nodes,
+            target_nodes,
+            exclude_df,
+            size
+        ):
+
+    def aux_gen_neg_test(source_set, target_set, ref_df):
+        s = None
+        t = None
+        trial = 0
+        while True:
+            trial += 1
+            s = np.random.choice(source_set, 1)[0]
+            t = np.random.choice(target_set, 1)[0]
+            if len(ref_df.loc[(ref_df['source'] == s) & (ref_df['target'] == t)]) == 0:
+                break
+        return [s, t]
+
+    n_jobs= multiprocessing.cpu_count()
+    res = Parallel(n_jobs=n_jobs)(delayed(
+        aux_gen_neg_test
+    )(source_nodes, target_nodes, exclude_df) for _ in range(size))
+
+    arr = np.array(res)
+    df = pd.DataFrame(data=arr, columns=['source', 'target'])
+    return df
 
 def eval_LP(node_emb, dataset):
     global model_use_data_DIR
 
-    def calc(row):
-        return calculate_P(node_emb, row['source'], row['target'])
+    def calc_edge_feature(row, node_emb):
+        return np.multiply(node_emb[int(row['source'])], node_emb[int(row['target'])])
 
+    test_neg_path = os.path.join(model_use_data_DIR, 'base_neg_test_edges.csv')
+    test_pos_path = os.path.join(model_use_data_DIR, 'base_test_edges.csv')
+    source_nodes = None
+    target_nodes = None
 
     if dataset == 'dblp':
-        test_neg_path = os.path.join(model_use_data_DIR, 'base_neg_test_edges.csv')
-        test_pos_path = os.path.join(model_use_data_DIR,'base_test_edges.csv')
-        df_p = pd.read_csv(test_pos_path,index_col=None)
-        df_n = pd.read_csv(test_neg_path,index_col=None)
-        df_p['y_true'] = 1
-        df_n['y_true'] = 0
-        df = df_p.append(df_n,ignore_index=True)
-        df['y_pred'] = df.parallel_apply(
-            calc, axis=1
+        input_dir = './../../dblp/processed_data/'
+        source_nodes_file = os.path.join(input_dir, 'nodes_paper.csv')
+        target_nodes_file = os.path.join(input_dir, 'nodes_term.csv')
+
+        # ======================
+        # source : P target : T
+        # =====================
+        _df = pd.read_csv(source_nodes_file)
+        _df = _df.reset_index(drop=True)
+        col = list(_df.columns)[0]
+        source_nodes = _df[col]
+        _df = pd.read_csv(target_nodes_file)
+        _df = _df.reset_index(drop=True)
+        col = list(_df.columns)[0]
+        target_nodes = _df[col]
+
+    # ------------
+    # Train a classifier
+    # ------------
+    lp_clf_train_file = os.path.join(model_use_data_DIR,' lp_clf_train.csv')
+    if not os.path.exists(lp_clf_train_file):
+        lp_train_pos_df = pd.read_csv(
+            os.path.join(model_use_data_DIR,'base_train_edges.csv'),
+            index_col=None
+        ).sample(frac=0.25)
+
+        size = len(lp_train_pos_df)
+
+        df_p = pd.read_csv(test_pos_path, index_col=None)
+        df_n = pd.read_csv(test_neg_path, index_col=None)
+        exclude_df = lp_train_pos_df.append(
+            df_p,ignore_index=True).append(df_n,ignore_index=True)
+        lp_train_neg_df = generate_LP_clf_neg_samples(
+            source_nodes,
+            target_nodes,
+            exclude_df,
+            size
         )
+        lp_train_pos_df['y'] =1
+        lp_train_neg_df['y'] = 0
+        lp_clf_train = lp_train_pos_df.append(lp_train_neg_df,ignore_index=True)
+        lp_clf_train.to_csv(lp_clf_train_file,index=False)
+    else:
+        lp_clf_train = pd.read_csv(lp_clf_train_file,index_col=None)
 
+    x1 = list(lp_clf_train['source'].astype(int))
+    x2 = list(lp_clf_train['target'].astype(int))
+    x1 = node_emb[x1]
+    x2 = node_emb[x2]
+    X_train = np.multiply(x1, x2)
+    clf_obj = LogisticRegression()
+    y = lp_clf_train['y']
+    clf_obj.fit(X_train, y)
 
-        y_true = list(df['y_true'])
-        y_scores = list(df['y_pred'])
-        roc = roc_auc_score(y_true, y_scores)
-        print(' AUC ROC ', roc)
-        fpr, tpr, thresholds = roc_curve( y_true, y_scores)
+    # ===== Actual evaluation ==== #
+
+    df_p = pd.read_csv(test_pos_path,index_col=None)
+    df_n = pd.read_csv(test_neg_path,index_col=None)
+    df_p['y_true'] = 1
+    df_n['y_true'] = 0
+    df_test = df_p.append(df_n,ignore_index=True)
+
+    x1 = list(df_test['source'].astype(int))
+    x2 = list(df_test['target'].astype(int))
+    x1 = node_emb[x1]
+    x2 = node_emb[x2]
+    X_test = np.multiply(x1,x2)
+    predict_proba = clf_obj.predict_proba(X_test)
+    predict_proba = np.reshape(predict_proba[:,1],-1)
+
+    df_test['y_pred'] = predict_proba
+    y_true = list(df_test['y_true'])
+    y_scores = list(predict_proba)
+    roc = roc_auc_score(y_true, y_scores)
+    print(' >>  AUC ROC ', roc)
+    fpr, tpr, thresholds = roc_curve( y_true, y_scores)
 
 
 
