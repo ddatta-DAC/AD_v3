@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import os
 import sys
+from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_curve
 sys.path.append('./..')
 sys.path.append('./../..')
 import argparse
@@ -348,7 +350,7 @@ def exec(_dataset,  _method ):
             )
 
             np.save(output_file_name, node_embeddings)
-
+            node_emb = np.load(output_file_name, allow_pickle=True)
         elif _method == 'mp2vec':
             print('Running metapath2vec')
             run_m2pv.setup(
@@ -368,7 +370,7 @@ def exec(_dataset,  _method ):
             )
 
             np.save(output_file_name, node_embeddings)
-
+            node_emb = np.load(output_file_name, allow_pickle=True)
         elif _method == 'hin2vec':
             print('Running HN2vec')
             src_dir = os.path.join(model_use_data_DIR, _method )
@@ -380,9 +382,52 @@ def exec(_dataset,  _method ):
                 output_file_name=output_file_name,
                 model_use_data_DIR=None
             )
+            emb = np.load(output_file_name, allow_pickle=True)
+            node_emb = emb[0]
+            rel_emb = emb[1]
         else:
             print('Invalid method!!', _method)
 
+    eval_LP ( node_emb, _dataset )
+    return node_emb
+
+# ============================================== #
+def calculate_P(node_emb, node1, node2):
+    e1 = node_emb[node1]
+    e2 = node_emb[node2]
+    # p = Sigmoid( e1 . e2 )
+    z = 1 / (1 + np.exp(-np.dot(e1,e2)))
+    return z
+
+def eval_LP(node_emb, dataset):
+    global model_use_data_DIR
+
+    def calc(row):
+        return calculate_P(node_emb, row['source'], row['target'])
+
+
+    if dataset == 'dblp':
+        test_neg_path = os.path.join(model_use_data_DIR, 'base_neg_test_edges.csv')
+        test_pos_path = os.path.join(model_use_data_DIR,'base_test_edges.csv')
+        df_p = pd.read_csv(test_pos_path,index_col=None)
+        df_n = pd.read_csv(test_neg_path,index_col=None)
+        df_p['y_true'] = 1
+        df_n['y_true'] = 0
+        df = df_p.append(df_n,ignore_index=True)
+        df['y_pred'] = df.parallel_apply(
+            calc, axis=1
+        )
+
+
+        y_true = list(df['y_true'])
+        y_scores = list(df['y_pred'])
+        roc = roc_auc_score(y_true, y_scores)
+        print(' AUC ROC ', roc)
+        fpr, tpr, thresholds = roc_curve( y_true, y_scores)
+
+
+
+# ============================================== #
 parser = argparse.ArgumentParser()
 parser.add_argument(
     '--dataset', choices=['dblp'],
