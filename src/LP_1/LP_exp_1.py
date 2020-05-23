@@ -393,6 +393,6 @@ _dataset = args.dataset
 _method = args.method
 
 setup(_dataset)
-# prepare_data(_dataset)
+prepare_data(_dataset)
 create_neg_test_samples(_dataset)
 # exec(_dataset=_dataset, _method=_method )
