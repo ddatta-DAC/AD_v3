@@ -6,6 +6,10 @@ sys.path.append('./..')
 sys.path.append('./../..')
 import argparse
 import pickle
+from pandarallel import pandarallel
+pandarallel.initialize()
+from joblib import Parallel,delayed
+import multiprocessing
 import torch
 import stellargraph as sg
 try :
@@ -123,6 +127,60 @@ def create_data(
 
     return
 
+def create_neg_test_samples(dataset):
+    global model_use_data_DIR
+    input_dir = './../../dblp/processed_data/'
+    if dataset == 'dblp':
+        base_train_edges_file = os.path.join(model_use_data_DIR, 'base_train_edges.csv')
+        base_test_edges_file = os.path.join(model_use_data_DIR, 'base_test_edges.csv')
+        train_edges = pd.read_csv(base_train_edges_file, index_col=None)
+        test_edges = pd.read_csv(base_test_edges_file, index_col=None)
+
+        source_nodes_file = os.path.join(input_dir, 'nodes_paper.csv')
+        target_nodes_file = os.path.join(input_dir, 'nodes_term.csv')
+
+        # ======================
+        # target_edge_type = PT
+        # source : P target : T
+        # =====================
+        _df = pd.read_csv( source_nodes_file )
+        _df = _df.reset_index(drop=True)
+        col = list(_df.columns)[0]
+        source_set = _df[col]
+        _df = pd.read_csv( target_nodes_file )
+        _df = _df.reset_index(drop=True)
+        col = list(_df.columns)[0]
+        target_set = _df[col]
+        size = len(test_edges)
+        ref_df = train_edges.copy()
+        ref_df = ref_df.append(test_edges,ignore_index=True)
+
+        def aux_gen_neg_test( source_set, target_set, ref_df ):
+            s = None
+            t = None
+            trial = 0
+            while True:
+                trial += 1
+                s = np.random.choice(source_set,1)[0]
+                t = np.random.choice(target_set,1)[0]
+                if len(ref_df.loc[ (ref_df['source']==s) & (ref_df['target']==t) ]) == 0:
+                    break
+
+            print(' >> Found :', trial , '|| [',s,t,']')
+            return [s,t]
+
+        n_jobs =  multiprocessing.cpu_count()
+        res = Parallel(n_jobs = n_jobs)(delayed(
+            aux_gen_neg_test
+        )( source_set, target_set, ref_df) for _ in range(size))
+
+        arr = np.array(res)
+        df = pd.DataFrame(data=arr,columns=['source','target'])
+        op_file_path = os.path.join(model_use_data_DIR,'base_neg_test_edges.csv')
+        df.to_csv(op_file_path)
+
+
+
 
 def prepare_data(dataset):
     global model_use_data_DIR
@@ -131,8 +189,8 @@ def prepare_data(dataset):
     test_edges = None
 
     if dataset == 'dblp':
-        base_train_edges_file = 'base_train_edges.csv'
-        base_test_edges_file = 'base_test_edges.csv'
+        base_train_edges_file = os.path.join(model_use_data_DIR, 'base_train_edges.csv')
+        base_test_edges_file = os.path.join(model_use_data_DIR,'base_test_edges.csv')
         input_dir = './../../dblp/processed_data/'
 
         # =====
@@ -335,5 +393,6 @@ _dataset = args.dataset
 _method = args.method
 
 setup(_dataset)
-prepare_data(_dataset)
-exec(_dataset=_dataset, _method=_method )
+# prepare_data(_dataset)
+create_neg_test_samples(_dataset)
+# exec(_dataset=_dataset, _method=_method )
