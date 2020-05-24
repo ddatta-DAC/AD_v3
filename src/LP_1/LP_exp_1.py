@@ -190,6 +190,7 @@ def prepare_data(dataset):
     node_dict = None
     train_edges = None
     test_edges = None
+    test_ratio = 0.2
 
     if dataset == 'dblp':
         base_train_edges_file = os.path.join(model_use_data_DIR, 'base_train_edges.csv')
@@ -243,7 +244,7 @@ def prepare_data(dataset):
         )
 
         target_df['rel'] = e_type_idx
-        test_size = int(len(target_df) * 0.3)
+        test_size = int(len(target_df) * test_ratio)
         print('Test size ::', test_size)
         # =====
         # Sample edges such that none of the nodes in edges are not of degree 1
@@ -467,7 +468,7 @@ def eval_LP(node_emb, dataset):
         lp_train_pos_df = pd.read_csv(
             os.path.join(model_use_data_DIR,'base_train_edges.csv'),
             index_col=None
-        ).sample(frac=0.25)
+        ).sample(frac=1)
 
         size = len(lp_train_pos_df)
 
