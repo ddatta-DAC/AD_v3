@@ -49,24 +49,7 @@ class gmodel01(torch.nn.Module):
                     metapaths=[mp],
             )
             self.mprw_obj.append(obj_rw)
-
         return
-
-
-    # ------------
-    # Filter the node types which are valid for a node type
-    # ------------
-    def get_valid_metapaths(self, x_type):
-        # Todo : figure out a better way
-        arr = np.array(self.metapath_list)[:0]
-        mp = []
-
-        for j in range(len(arr)):
-            if x_type == arr[j]: mp.append(j)
-        return mp
-
-
-
 
     '''
     input_x :
@@ -76,19 +59,8 @@ class gmodel01(torch.nn.Module):
     '''
     def forward(
         self,
-        x_target = None, # shape : [ ?, 1 ]
-        x_type = -1
+        x_input
     ) :
-        # --------
-        # For all meta-paths that are valid
-        # --------
-        valid_metapaths = self.get_valid_metapaths(x_type)
-
-        # for mp in valid_metapaths:
-        #     # Calculate per meta-path value
-
-
-
 
 
         return
