@@ -84,8 +84,8 @@ class gmodel01(torch.nn.Module):
         # --------
         valid_metapaths = self.get_valid_metapaths(x_type)
 
-        for mp in valid_metapaths:
-            # Calculate per meta-path value
+        # for mp in valid_metapaths:
+        #     # Calculate per meta-path value
 
 
 

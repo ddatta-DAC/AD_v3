@@ -29,20 +29,22 @@ class graph_container():
             node_df, # node_id, type
             edge_df  # format : source, target
     ):
-        self.node_types = set(node_df['type'])
+        node_types = list(sorted(set(node_df['type'])))
 
         # node_type : node_type_id
-        node_type_ids = {
-            e[1]:e[0] for e in enumerate(self.node_types)
-        }
-        #Set static variable
-        graph_container.node_type_ids = node_type_ids
+        # node_types = {
+        #     e[1] : e[0] for e in enumerate(self.node_types)
+        # }
+        print(' node_type_ids ', node_types)
+
+        # Set static variable
+        graph_container.node_types = node_types
 
         # Convert node type to type ids
-        def replace_with_node_type_id(val):
-            return node_type_ids[val]
-
-        node_df['type'] = node_df.parallel_apply(replace_with_node_type_id, asix=1)
+        # def replace_with_node_type_id(val):
+        #     return node_type_ids[val]
+        #
+        # node_df['type'] = node_df['type'].parallel_apply(replace_with_node_type_id)
 
         i = node_df['node_id']
         j = node_df['type']
@@ -50,9 +52,12 @@ class graph_container():
         # Set static variable
         graph_container.node_id2type_dict = node_id2type_dict
         node_dict = {}
-        for nt in self.node_types:
+
+        for nt in set(node_df['type']):
             tmp =  node_df.loc[node_df['type']==nt].reset_index(drop=True)
-            tmp = tmp.set_index(nt)
+            tmp = tmp.set_index('node_id')
+            tmp = tmp.rename(columns={'node_id': str(nt)})
+            del tmp['type']
             node_dict [nt] = tmp
 
         def set_e_type(row):
@@ -61,24 +66,29 @@ class graph_container():
             et = '_'.join(list(sorted((str(t1),str(t2)))))
             return et
 
-        edge_df['type'] = edge_df.parallel_apply(set_e_type,asix=1)
+        edge_df['type'] = edge_df.parallel_apply(set_e_type,axis=1)
         # Create numeric ids for each edge type
         self.edge_type2id_dict = { e[1]:e[0] for e in enumerate(set(edge_df['type']))}
 
         def replace_with_edge_id(val):
             return self.edge_type2id_dict[val]
 
-        edge_df['type'] = edge_df.parallel_apply(replace_with_edge_id)
+        edge_df['type'] = edge_df['type'].parallel_apply(replace_with_edge_id)
+
         graph_container.sg_obj = stellargraph.StellarGraph(
             node_dict,
-            edge_df
+            edge_df,
+            edge_type_column="type"
         )
         return
 
     @staticmethod
-    def get_nbr_by_type( node_id, node_type=None):
+    def _get_nbr_by_type( node_id, node_type=None):
         nodes = graph_container.sg_obj.neighbors(node=node_id)
-        nodes = [ _ for _ in nodes if  graph_container.node_id2type_dict[_] == node_type]
+        nodes = [
+            _ for _ in nodes
+            if  graph_container.node_id2type_dict[_] == node_type
+        ]
         return nodes
 
     @staticmethod
@@ -99,35 +109,44 @@ class graph_container():
 
     @staticmethod
     def _get_node_type(node_id):
-        return graph_container.node_id2type_dict[node_id]
+        return str(graph_container.node_id2type_dict[node_id])
 
 
     @staticmethod
     def _aux_get_mp_nbrs(
-            node_id, num_samples
+            node_id,
+            num_samples=-1
     ):
         node_type = graph_container._get_node_type(node_id)
         metapaths = graph_container.metapaths
         valid_mps = [_ for _ in metapaths if _[0] == node_type]
+
         all_walks = []
+        rw_obj = UniformRandomMetaPathWalk(
+            graph_container.sg_obj,
+            metapaths=valid_mps
+        )
+
         for mp in valid_mps:
-            rw_obj = UniformRandomMetaPathWalk(
-                graph_container.sg_obj,
+            walk_len = len(mp)
+
+            walks = rw_obj.run(
+                [node_id],
+                length=walk_len,
+                n=num_samples,
                 metapaths=[mp]
             )
-            walks = rw_obj.run(
-                node_id,
-                length=len(mp),
-                n=num_samples
-            )
-            all_walks.append(walks)
+
+            all_walks.extend(walks)
         return all_walks
 
     @staticmethod
-    def _get_metapath_nbrs(node_id_list, num_samples):
+    def _get_metapath_nbrs(
+            node_id_list,
+            num_samples
+    ):
         n_jobs = multiprocessing.cpu_count()
-        pool = multiprocessing.Pool(processes=n_jobs)
-
+        pool = Pool(processes=n_jobs)
         results = [ pool.apply_async(
             graph_container._aux_get_mp_nbrs,
             args=( node_id, num_samples,)) for node_id in node_id_list ]
@@ -135,12 +154,4 @@ class graph_container():
         all_walks = []
         for op in output:
             all_walks.extend(op)
-        print(len(op),len(op[0]))
-        print(' >> ' , np.array(all_walks).shape)
         return all_walks
-
-
-
-
-
-
