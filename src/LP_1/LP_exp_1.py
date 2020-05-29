@@ -277,10 +277,10 @@ def prepare_data(dataset):
         if not os.path.exists(base_test_neg_edges_file):
             create_neg_test_samples(_dataset)
 
-    elif dataset == 'usimport1':
+    elif dataset == 'us_import1':
         base_train_edges_file = os.path.join(model_use_data_DIR, 'base_train_edges.csv')
         base_test_edges_file = os.path.join(model_use_data_DIR, 'base_test_edges.csv')
-        input_dir = './../../us_import1/processed_data/'
+        input_dir = './../../us_import1/processed/'
 
         target_edge_types = [
             ['PortOfLading', 'ShipperPanjivaID'],
