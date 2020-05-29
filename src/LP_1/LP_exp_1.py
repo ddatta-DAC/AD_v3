@@ -47,7 +47,6 @@ def setup(dataset):
     model_save_data_DIR = os.path.join(model_save_data_DIR, dataset)
     if not os.path.exists(model_save_data_DIR):
         os.mkdir(model_save_data_DIR)
-
     return
 
 
@@ -277,6 +276,128 @@ def prepare_data(dataset):
         base_test_neg_edges_file = os.path.join(model_use_data_DIR, 'base_neg_test_edges.csv')
         if not os.path.exists(base_test_neg_edges_file):
             create_neg_test_samples(_dataset)
+
+    elif dataset == 'usimport1':
+        base_train_edges_file = os.path.join(model_use_data_DIR, 'base_train_edges.csv')
+        base_test_edges_file = os.path.join(model_use_data_DIR, 'base_test_edges.csv')
+        input_dir = './../../us_import1/processed_data/'
+
+        target_edge_types = [
+            ['PortOfLading', 'ShipperPanjivaID'],
+            ['PortOfUnlading', 'ConsigneePanjivaID'],
+            ['ShipmentDestination', 'ConsigneePanjivaID'],
+            ['ShipperPanjivaID', 'ShipmentOrigin']
+        ]
+        target_edge_types = ['_'.join(list(sorted(_))) for _ in  target_edge_types]
+
+        node_types = ['ConsigneePanjivaID', 'HSCode', 'PortOfLading', 'PortOfUnlading', 'ShipmentDestination',
+                      'ShipmentOrigin', 'ShipperPanjivaID']
+        node_files = {node_type: 'nodes_{}.csv'.format(node_type) for node_type in node_types}
+        node_dict = {}
+
+        for _type, file in node_files.items():
+            file = os.path.join(input_dir, file)
+            _df = pd.read_csv(
+                file
+            )
+            _df = _df.reset_index(drop=True)
+            ids = _df[list(_df.columns)[0]]
+            for e in ids:
+                node_dict[e] = _type
+
+
+        edge_types = [
+            ['ShipperPanjivaID', 'HSCode'],
+            ['ConsigneePanjivaID', 'HSCode'],
+            ['ShipperPanjivaID', 'ConsigneePanjivaID'],
+            ['PortOfLading', 'ShipperPanjivaID'],
+            ['PortOfLading', 'PortOfUnlading'],
+            ['PortOfUnlading', 'ConsigneePanjivaID'],
+            ['ShipmentDestination', 'PortOfUnlading'],
+            ['PortOfLading', 'ShipmentOrigin'],
+            ['ShipmentDestination', 'ConsigneePanjivaID'],
+            ['ShipperPanjivaID','ShipmentOrigin']
+        ]
+        edge_types = ['_'.join(list(sorted(_))) for _ in  edge_types]
+        edge_files = {}
+
+        for edge_type in edge_types:
+            # key = '_'.join(sorted(edge_type))
+            fname = edge_type + '_edges.csv'
+            edge_files[edge_type] =  fname
+
+        node_dict = {}
+        for _type, file in node_files.items():
+            file = os.path.join(input_dir, file)
+            _df = pd.read_csv(
+                file
+            )
+            _df = _df.reset_index(drop=True)
+            ids = _df[list(_df.columns)[0]]
+            for e in ids:
+                node_dict[e] = _type
+
+        print('Number of nodes ::', len(node_dict))
+        edges_df = None
+        e_type_idx = 0
+
+        for e_type, file in edge_files.items():
+            file = os.path.join(input_dir, file)
+            # TODO : Check
+            if e_type in target_edge_types:
+                continue
+            _df = _df = pd.read_csv(file, index_col=None)
+            _df['rel'] = e_type_idx
+            if edges_df is None:
+                edges_df = _df
+            else:
+                edges_df = edges_df.append(_df, ignore_index=True)
+            e_type_idx += 1
+
+
+        target_df =  None
+        for target_edge_type in target_edge_types:
+            _df = pd.read_csv(
+                os.path.join(input_dir, edge_files[target_edge_type]),
+                index_col=None
+            )
+            _df['rel'] = e_type_idx
+            e_type_idx += 1
+            if target_df is None:
+                target_df = _df
+            else:
+                target_df = target_df.append(_df,ignore_index =True)
+
+
+        test_size = int(len(target_df) * test_ratio)
+        print('Test size ::', test_size)
+        if os.path.exists(base_test_edges_file) and os.path.exists(base_train_edges_file):
+            train_edges = pd.read_csv(base_train_edges_file, index_col=None)
+            test_edges =  pd.read_csv(base_test_edges_file, index_col=None)
+        else:
+            target_nodes = list(set(target_df['target']))
+            keep_links_df = pd.DataFrame( columns=list(target_df.columns) )
+            test_cand = pd.DataFrame( columns=list(target_df.columns))
+
+            for i,row in target_df.iterrows():
+                if row['target'] in target_nodes:
+                    keep_links_df = keep_links_df.append(row, ignore_index=True)
+                    target_nodes.remove(row['target'])
+                else:
+                    test_cand = test_cand.append(row, ignore_index=True)
+
+            test_edges = test_cand.head(test_size)
+            train_size = len(test_cand) - test_size
+            train = test_cand.tail(train_size)
+            train_edges = train.append(keep_links_df)
+            train_edges = train_edges.append(edges_df)
+            train_edges.to_csv(base_train_edges_file,index=False)
+            test_edges.to_csv(base_test_edges_file, index=False)
+
+        base_test_neg_edges_file = os.path.join(model_use_data_DIR, 'base_neg_test_edges.csv')
+        if not os.path.exists(base_test_neg_edges_file):
+            create_neg_test_samples(_dataset)
+
 
     print('Train edges : ', len(train_edges), 'Test edges : ', len(test_edges))
 
@@ -526,7 +647,7 @@ def eval_LP(node_emb, dataset):
 # ============================================== #
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    '--dataset', choices=['dblp'],
+    '--dataset', choices=['dblp','us_import1'],
     default='dblp'
 )
 parser.add_argument(
